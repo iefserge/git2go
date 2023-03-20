@@ -3,6 +3,7 @@ TEST_ARGS ?= --count=1
 default: test
 
 
+
 generate: static-build/install/lib/libgit2.a
 	go generate --tags "static" ./...
 
