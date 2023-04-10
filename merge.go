@@ -263,6 +263,27 @@ func (r *Repository) MergeAnalysis(theirHeads []*AnnotatedCommit) (MergeAnalysis
 
 }
 
+func (r *Repository) MergeAnalysisForRef(ourRef *Reference, theirHeads []*AnnotatedCommit) (MergeAnalysis, MergePreference, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	gmerge_head_array := make([]*C.git_annotated_commit, len(theirHeads))
+	for i := 0; i < len(theirHeads); i++ {
+		gmerge_head_array[i] = theirHeads[i].ptr
+	}
+	ptr := unsafe.Pointer(&gmerge_head_array[0])
+	var analysis C.git_merge_analysis_t
+	var preference C.git_merge_preference_t
+	err := C.git_merge_analysis_for_ref(&analysis, &preference, r.ptr, ourRef.ptr, (**C.git_annotated_commit)(ptr), C.size_t(len(theirHeads)))
+	runtime.KeepAlive(theirHeads)
+	runtime.KeepAlive(ourRef)
+	if err < 0 {
+		return MergeAnalysisNone, MergePreferenceNone, MakeGitError(err)
+	}
+	return MergeAnalysis(analysis), MergePreference(preference), nil
+
+}
+
 func (r *Repository) MergeCommits(ours *Commit, theirs *Commit, options *MergeOptions) (*Index, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
